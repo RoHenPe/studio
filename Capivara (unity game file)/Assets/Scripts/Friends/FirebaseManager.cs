@@ -47,6 +47,8 @@ public class FirebaseManager : MonoBehaviour
         DatabaseReference roomRef = dbReference.Child("game_rooms").Child(roomId);
 
         roomRef.RunTransaction(mutableData => {
+            if (mutableData.Value == null)
+            {
                 // Sala não existe, criando...
                 mutableData.Child("player1").Value = deviceId;
                 mutableData.Child("status").Value = "waiting";
@@ -123,17 +125,12 @@ public class FirebaseManager : MonoBehaviour
 
                 if (p1Id == deviceId)
                 {
-                    Debug.Log($"Entrou como Jogador 1 na sala '{roomId}'"); 
-                    // ... (rest of the logic)
-
-                if (p1Id == deviceId)
-                {
                     Debug.Log($"Entrou como Jogador 1 na sala '{roomId}'");
                     
                     // Configura disconnect
                     roomRef.Child("player1").OnDisconnect().RemoveValue();
                     roomRef.Child("player1_data").OnDisconnect().RemoveValue();
-                    roomRef.Child("status").OnDisconnect().SetValue("waiting"); // Se P1 sair, sala pode voltar a waiting ou fechar
+                    roomRef.Child("status").OnDisconnect().SetValue("waiting"); 
 
                     ListenForPlayer2(roomRef, roomId);
                 }
