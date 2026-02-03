@@ -11,19 +11,38 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { joinRoom } from "@/services/roomService";
+import { useToast } from "@/hooks/use-toast";
 
 export default function JoinPage() {
   const router = useRouter();
   const params = useParams();
+  const { toast } = useToast();
   const roomId = params.id as string;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.push(`/room/${roomId}/play`);
-    }, 3000); // Simulate 3 seconds connection time
+    if (!roomId) {
+      router.push('/');
+      return;
+    };
 
-    return () => clearTimeout(timer);
-  }, [roomId, router]);
+    const attemptToJoin = async () => {
+      try {
+        await joinRoom(roomId);
+        // If joinRoom is successful, it means the room is now full and connected.
+        router.push(`/room/${roomId}/play`);
+      } catch (error: any) {
+        toast({
+          title: "Failed to Join Room",
+          description: error.message,
+          variant: "destructive",
+        });
+        router.push("/");
+      }
+    };
+
+    attemptToJoin();
+  }, [roomId, router, toast]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-background text-foreground">

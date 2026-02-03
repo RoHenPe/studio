@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm, type SubmitHandler } from "react-hook-form";
@@ -17,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { createRoom } from "@/services/roomService";
+import { Loader2 } from "lucide-react";
 
 const RoomIdSchema = z.object({
   roomId: z.string().min(1, "Room ID cannot be empty").max(50, "Room ID is too long"),
@@ -27,6 +30,7 @@ type RoomIdFormValues = z.infer<typeof RoomIdSchema>;
 export default function HomePage() {
   const router = useRouter();
   const { toast } = useToast();
+  const [isCreating, setIsCreating] = useState(false);
 
   const createForm = useForm<RoomIdFormValues>({
     resolver: zodResolver(RoomIdSchema),
@@ -36,12 +40,23 @@ export default function HomePage() {
     resolver: zodResolver(RoomIdSchema),
   });
 
-  const handleCreateRoom: SubmitHandler<RoomIdFormValues> = (data) => {
-    router.push(`/room/${data.roomId}/wait`);
+  const handleCreateRoom: SubmitHandler<RoomIdFormValues> = async (data) => {
+    setIsCreating(true);
+    try {
+      await createRoom(data.roomId);
+      router.push(`/room/${data.roomId}/wait`);
+    } catch (error: any) {
+      toast({
+        title: "Error Creating Room",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleJoinRoom: SubmitHandler<RoomIdFormValues> = (data) => {
-    // In a real app, you'd check if room exists
     router.push(`/room/${data.roomId}/join`);
   };
 
@@ -62,6 +77,7 @@ export default function HomePage() {
                 {...createForm.register("roomId")}
                 className="mt-2"
                 aria-invalid={createForm.formState.errors.roomId ? "true" : "false"}
+                disabled={isCreating}
               />
               {createForm.formState.errors.roomId && (
                 <p className="text-sm text-destructive mt-1">
@@ -69,8 +85,9 @@ export default function HomePage() {
                 </p>
               )}
             </div>
-            <Button type="submit" className="w-full">
-              Create Room
+            <Button type="submit" className="w-full" disabled={isCreating}>
+              {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isCreating ? "Creating..." : "Create Room"}
             </Button>
           </form>
 
