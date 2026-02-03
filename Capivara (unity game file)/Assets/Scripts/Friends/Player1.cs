@@ -29,9 +29,12 @@ public class Player1 : MonoBehaviour
                 axis = Vector2.up * force;
             }
 
-            // --- LINHA ADICIONADA ---
-            // Envia a posição Y para o Firebase
-            FirebaseManager.Instance.UpdatePlayerPosition(transform.position.y);
+            // Envia a posição Y para o Firebase (Otimizado)
+            if (Mathf.Abs(transform.position.y - lastSentY) > 0.05f) 
+            {
+                FirebaseManager.Instance.UpdatePlayerPosition(transform.position.y);
+                lastSentY = transform.position.y;
+            }
 
             transform.Rotate(Vector3.forward, rotationSpeed * Time.deltaTime);
 
@@ -42,6 +45,7 @@ public class Player1 : MonoBehaviour
             }
         }
     }
+    private float lastSentY = -9999f; // Initialize with a value that ensures first update
 
     public void OnTriggerEnter2D(Collider2D collision)
     {

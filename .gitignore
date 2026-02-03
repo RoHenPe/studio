@@ -1,0 +1,16 @@
+6000.3.6f1/
+Capivara (unity game file)/Library/
+Capivara (unity game file)/Temp/
+Capivara (unity game file)/Obj/
+Capivara (unity game file)/Build/
+Capivara (unity game file)/Builds/
+Capivara (unity game file)/Logs/
+Capivara (unity game file)/UserSettings/
+Capivara (unity game file)/MemoryCaptures/
+*.apk
+*.aab
+*.unitypackage
+.vs/
+.gradle/
+*.csproj
+*.sln

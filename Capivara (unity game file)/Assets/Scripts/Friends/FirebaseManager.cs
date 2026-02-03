@@ -46,34 +46,112 @@ public class FirebaseManager : MonoBehaviour
         string deviceId = SystemInfo.deviceUniqueIdentifier;
         DatabaseReference roomRef = dbReference.Child("game_rooms").Child(roomId);
 
-        roomRef.GetValueAsync().ContinueWithOnMainThread(task => {
-            if (task.IsFaulted) { return; }
+        roomRef.RunTransaction(mutableData => {
+                // Sala não existe, criando...
+                mutableData.Child("player1").Value = deviceId;
+                mutableData.Child("status").Value = "waiting";
+                
+                // Seed para sincronização de obstáculos
+                int seed = new System.Random().Next();
+                mutableData.Child("seed").Value = seed;
 
-            DataSnapshot snapshot = task.Result;
-            if (!snapshot.Exists)
-            {
-                Debug.Log($"Sala '{roomId}' não encontrada. Criando nova sala...");
-                // Cria os dados iniciais do jogador 1
-                roomRef.Child("player1").SetValueAsync(deviceId);
-                roomRef.Child("status").SetValueAsync("waiting");
-                roomRef.Child("player1_data").Child("posY").SetValueAsync(0);
-                roomRef.Child("player1_data").Child("score").SetValueAsync(0);
-                roomRef.Child("player1_data").Child("isAlive").SetValueAsync(true);
-                ListenForPlayer2(roomRef, roomId);
+                // Initialize player 1 data
+                var p1Data = mutableData.Child("player1_data");
+                p1Data.Child("posY").Value = 0;
+                p1Data.Child("score").Value = 0;
+                p1Data.Child("isAlive").Value = true;
+                
+                return TransactionResult.Success(mutableData);
             }
             else
             {
-                if (snapshot.HasChild("player2")) { return; }
+                // Sala existe, tentando entrar...
+                var p1 = mutableData.Child("player1").Value;
+                var p2 = mutableData.Child("player2").Value;
 
-                Debug.Log($"Entrando na sala '{roomId}' como Jogador 2.");
-                // Cria os dados iniciais do jogador 2
-                roomRef.Child("player2").SetValueAsync(deviceId);
-                roomRef.Child("status").SetValueAsync("ready");
-                roomRef.Child("player2_data").Child("posY").SetValueAsync(0);
-                roomRef.Child("player2_data").Child("score").SetValueAsync(0);
-                roomRef.Child("player2_data").Child("isAlive").SetValueAsync(true);
+                if (p1 != null && p2 != null)
+                {
+                    // Sala cheia
+                    return TransactionResult.Abort(); 
+                }
+                else if (p1 == null) 
+                {
+                    // Vaga no player 1
+                    mutableData.Child("player1").Value = deviceId;
+                     // Initialize player 1 data if needed
+                    var p1Data = mutableData.Child("player1_data");
+                    if(p1Data.Value == null) {
+                        p1Data.Child("posY").Value = 0;
+                        p1Data.Child("score").Value = 0;
+                        p1Data.Child("isAlive").Value = true;
+                    }
+                    return TransactionResult.Success(mutableData);
+                }
+                else if (p2 == null)
+                {
+                    // Vaga no player 2
+                    mutableData.Child("player2").Value = deviceId;
+                    mutableData.Child("status").Value = "ready";
+                    
+                    // Initialize player 2 data
+                    var p2Data = mutableData.Child("player2_data");
+                    p2Data.Child("posY").Value = 0;
+                    p2Data.Child("score").Value = 0;
+                    p2Data.Child("isAlive").Value = true;
+                    
+                    return TransactionResult.Success(mutableData);
+                }
+            }
+            return TransactionResult.Abort();
+        }).ContinueWithOnMainThread(task => {
+            if (task.Exception != null)
+            {
+                Debug.LogError($"Erro ao entrar na sala: {task.Exception}");
+                OnMatchmakingSuccess?.Invoke(roomId, -1);
+            }
+            else if (task.IsCompleted)
+            {
+                DataSnapshot snapshot = task.Result.Snapshot;
+                string p1Id = snapshot.Child("player1").Value?.ToString();
+                string p2Id = snapshot.Child("player2").Value?.ToString();
                 
-                OnMatchmakingSuccess?.Invoke(roomId, 2);
+                // Recupera a seed
+                if (snapshot.Child("seed").Exists)
+                {
+                    GameSession.Seed = int.Parse(snapshot.Child("seed").Value.ToString());
+                }
+
+                if (p1Id == deviceId)
+                {
+                    Debug.Log($"Entrou como Jogador 1 na sala '{roomId}'"); 
+                    // ... (rest of the logic)
+
+                if (p1Id == deviceId)
+                {
+                    Debug.Log($"Entrou como Jogador 1 na sala '{roomId}'");
+                    
+                    // Configura disconnect
+                    roomRef.Child("player1").OnDisconnect().RemoveValue();
+                    roomRef.Child("player1_data").OnDisconnect().RemoveValue();
+                    roomRef.Child("status").OnDisconnect().SetValue("waiting"); // Se P1 sair, sala pode voltar a waiting ou fechar
+
+                    ListenForPlayer2(roomRef, roomId);
+                }
+                else if (p2Id == deviceId)
+                {
+                    Debug.Log($"Entrou como Jogador 2 na sala '{roomId}'");
+
+                    // Configura disconnect
+                    roomRef.Child("player2").OnDisconnect().RemoveValue();
+                    roomRef.Child("player2_data").OnDisconnect().RemoveValue();
+                    
+                    OnMatchmakingSuccess?.Invoke(roomId, 2);
+                }
+                else
+                {
+                     Debug.LogError("Sala cheia ou erro desconhecido.");
+                     OnMatchmakingSuccess?.Invoke(roomId, -1);
+                }
             }
         });
     }

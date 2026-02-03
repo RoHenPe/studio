@@ -34,7 +34,13 @@ public class GameManagerMult : MonoBehaviour
     {
         Time.timeScale = 1;
         GameOverObj.SetActive(false);
-        if (barrelSpawner != null) barrelSpawner.Resume();
+        if (barrelSpawner != null) 
+        {
+            // Garante que o spawner use a seed sincronizada (ou aleatória se teste local)
+            int seed = GameSession.Seed != 0 ? GameSession.Seed : new System.Random().Next();
+            barrelSpawner.StartSpawner(seed);
+            barrelSpawner.Resume();
+        }
         
         SetupPlayers();
         SetupFirebaseListeners();

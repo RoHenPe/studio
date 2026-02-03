@@ -14,8 +14,10 @@ public class SpawnerMulti : MonoBehaviour
     private List<Move00> barrils = new List<Move00>(); // Lista para armazenar todos os Barrils criados
 
     // Start is called before the first frame update
-    void Start()
+    // Modificado para iniciar apenas quando sincronizado
+    public void StartSpawner(int seed)
     {
+        Random.InitState(seed);
         InvokeRepeating(nameof(Spawn), time, time); 
     }
 

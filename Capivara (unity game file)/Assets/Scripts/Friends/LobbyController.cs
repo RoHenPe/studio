@@ -41,6 +41,16 @@ public class LobbyController : MonoBehaviour
 
     private void HandleMatchmakingSuccess(string roomId, int playerNumber)
     {
+        if (playerNumber == -1)
+        {
+            Debug.LogError("Falha ao entrar na sala. Tente novamente.");
+            // Reset UI
+            findMatchButton.interactable = true;
+            if (pulseCoroutine != null) StopCoroutine(pulseCoroutine);
+            findMatchButton.transform.localScale = Vector3.one; 
+            return;
+        }
+
         Debug.Log($"Sucesso! Entrando na sala {roomId} como Jogador {playerNumber}");
         
         GameSession.RoomId = roomId;
