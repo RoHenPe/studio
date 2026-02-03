@@ -113,7 +113,7 @@ public class FirebaseManager : MonoBehaviour
             }
             else if (task.IsCompleted)
             {
-                DataSnapshot snapshot = task.Result.Snapshot;
+                DataSnapshot snapshot = task.Result;
                 string p1Id = snapshot.Child("player1").Value?.ToString();
                 string p2Id = snapshot.Child("player2").Value?.ToString();
                 
